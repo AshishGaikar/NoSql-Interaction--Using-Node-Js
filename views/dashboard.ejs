@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <h1>✨ User Management Dashboard</h1>
+                <div class="stats">
+                    <div class="stat-card">
+                        <span class="stat-number" id="totalUsers"><%= users.length %></span>
+                        <span class="stat-label">Total Users</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="onlineUsers"><%= users.length %></span>
+                        <span class="stat-label">Active</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="dashboard">
+            <div class="form-section">
+                <h2>➕ Add New User</h2>
+                <form id="userForm" class="user-form">
+                    <input type="text" id="name" placeholder="👤 Full Name" required>
+                    <input type="email" id="email" placeholder="📧 Email Address" required>
+                    <input type="number" id="age" placeholder="🎂 Age" required>
+                    <input type="text" id="city" placeholder="📍 City" required>
+                    <button type="submit" class="btn btn-primary">✨ Add User</button>
+                </form>
+            </div>
+
+            <div class="users-section">
+                <div class="section-header">
+                    <h2>👥 Users Directory</h2>
+                    <div class="quick-actions">
+                        <button onclick="exportUsers()" class="btn btn-sm btn-secondary">📊 Export</button>
+                        <button onclick="refreshUsers()" class="btn btn-sm btn-secondary">🔄 Refresh</button>
+                    </div>
+                </div>
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="🔍 Search by name, email, city...">
+                    <div class="filter-info">
+                        <span class="user-count">👥 <span id="userCount"><%= users.length %></span> users</span>
+                        <button onclick="clearSearch()" class="btn btn-clear">Clear</button>
+                    </div>
+                </div>
+                <div id="usersList" class="users-table">
+                    <% users.forEach(user => { %>
+                        <div class="user-row" data-id="<%= user._id %>">
+                            <div class="user-info">
+                                <span class="name">👤 <%= user.name %></span>
+                                <span class="email">📧 <%= user.email %></span>
+                                <span class="details">🎂 <%= user.age %> years • 📍 <%= user.city %></span>
+                                <span class="timestamp">⏰ Updated: <%= new Date(user.updatedAt).toLocaleString() %></span>
+                            </div>
+                            <div class="user-actions">
+                                <button onclick="editUser('<%= user._id %>', '<%= user.name %>', '<%= user.email %>', <%= user.age %>, '<%= user.city %>')" class="btn btn-sm btn-warning">✏️ Edit</button>
+                                <button onclick="deleteUser('<%= user._id %>')" class="btn btn-sm btn-danger">🗑️ Delete</button>
+                            </div>
+                        </div>
+                    <% }) %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional Info Panels -->
+        <div class="info-panels">
+            <div class="info-card">
+                <h3>📈 Analytics</h3>
+                <div class="analytics-grid">
+                    <div class="metric">
+                        <span class="metric-value" id="avgAge">0</span>
+                        <span class="metric-label">Avg Age</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value" id="topCity">-</span>
+                        <span class="metric-label">Top City</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-value" id="newToday">0</span>
+                        <span class="metric-label">Added Today</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-card">
+                <h3>🚀 Quick Actions</h3>
+                <div class="quick-buttons">
+                    <button onclick="addSampleUsers()" class="btn btn-outline">➕ Add Sample Data</button>
+                    <button onclick="clearAllUsers()" class="btn btn-outline">🗑️ Clear All</button>
+                    <button onclick="downloadBackup()" class="btn btn-outline">💾 Backup Data</button>
+                </div>
+            </div>
+            
+            <div class="info-card">
+                <h3>📊 Recent Activity</h3>
+                <div id="activityLog" class="activity-log">
+                    <div class="activity-item">
+                        <span class="activity-icon">🎉</span>
+                        <span class="activity-text">Dashboard initialized</span>
+                        <span class="activity-time">Just now</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="editModal" class="modal">
+            <div class="modal-content">
+                <h3>✏️ Edit User</h3>
+                <form id="editForm">
+                    <input type="hidden" id="editId">
+                    <input type="text" id="editName" placeholder="👤 Full Name" required>
+                    <input type="email" id="editEmail" placeholder="📧 Email Address" required>
+                    <input type="number" id="editAge" placeholder="🎂 Age" required>
+                    <input type="text" id="editCity" placeholder="📍 City" required>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-primary">💾 Update</button>
+                        <button type="button" onclick="closeModal()" class="btn btn-secondary">❌ Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let users = <%- JSON.stringify(users) %>;
+
+        // Add User
+        document.getElementById('userForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                age: document.getElementById('age').value,
+                city: document.getElementById('city').value
+            };
+            
+            const response = await fetch('/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                users.push(result.data);
+                renderUsers();
+                document.getElementById('userForm').reset();
+                updateStats();
+            }
+        });
+
+        // Edit User
+        function editUser(id, name, email, age, city) {
+            document.getElementById('editId').value = id;
+            document.getElementById('editName').value = name;
+            document.getElementById('editEmail').value = email;
+            document.getElementById('editAge').value = age;
+            document.getElementById('editCity').value = city;
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        document.getElementById('editForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editId').value;
+            const formData = {
+                name: document.getElementById('editName').value,
+                email: document.getElementById('editEmail').value,
+                age: document.getElementById('editAge').value,
+                city: document.getElementById('editCity').value
+            };
+            
+            const response = await fetch(`/api/users/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                const index = users.findIndex(u => u._id === id);
+                users[index] = result.data;
+                renderUsers();
+                closeModal();
+            }
+        });
+
+        // Delete User
+        async function deleteUser(id) {
+            if (confirm('Delete this user?')) {
+                const response = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+                if (response.ok) {
+                    users = users.filter(u => u._id !== id);
+                    renderUsers();
+                    updateStats();
+                }
+            }
+        }
+
+        // Search Users
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('.user-row');
+            let visibleCount = 0;
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                if (text.includes(query)) {
+                    row.style.display = 'flex';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            document.getElementById('userCount').textContent = visibleCount;
+        });
+
+        // Clear Search
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            document.querySelectorAll('.user-row').forEach(row => row.style.display = 'flex');
+            document.getElementById('userCount').textContent = users.length;
+        }
+
+        // Render Users
+        function renderUsers() {
+            const usersList = document.getElementById('usersList');
+            usersList.innerHTML = users.map(user => `
+                <div class="user-row" data-id="${user._id}">
+                    <div class="user-info">
+                        <span class="name">👤 ${user.name}</span>
+                        <span class="email">📧 ${user.email}</span>
+                        <span class="details">🎂 ${user.age} years • 📍 ${user.city}</span>
+                        <span class="timestamp">⏰ Updated: ${new Date(user.updatedAt).toLocaleString()}</span>
+                    </div>
+                    <div class="user-actions">
+                        <button onclick="editUser('${user._id}', '${user.name}', '${user.email}', ${user.age}, '${user.city}')" class="btn btn-sm btn-warning">✏️ Edit</button>
+                        <button onclick="deleteUser('${user._id}')" class="btn btn-sm btn-danger">🗑️ Delete</button>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('userCount').textContent = users.length;
+        }
+
+        // Update Stats
+        function updateStats() {
+            document.getElementById('totalUsers').textContent = users.length;
+            document.getElementById('onlineUsers').textContent = users.length;
+            updateAnalytics();
+        }
+
+        // Update Analytics
+        function updateAnalytics() {
+            if (users.length > 0) {
+                const avgAge = Math.round(users.reduce((sum, user) => sum + parseInt(user.age), 0) / users.length);
+                document.getElementById('avgAge').textContent = avgAge;
+                
+                const cities = users.map(u => u.city);
+                const topCity = cities.sort((a,b) => cities.filter(v => v===a).length - cities.filter(v => v===b).length).pop();
+                document.getElementById('topCity').textContent = topCity || '-';
+                
+                const today = new Date().toDateString();
+                const newToday = users.filter(u => new Date(u.createdAt).toDateString() === today).length;
+                document.getElementById('newToday').textContent = newToday;
+            }
+        }
+
+        // Additional Functions
+        function exportUsers() {
+            const data = JSON.stringify(users, null, 2);
+            const blob = new Blob([data], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'users-export.json';
+            a.click();
+            addActivity('📊', 'Users exported to JSON');
+        }
+
+        function refreshUsers() {
+            location.reload();
+        }
+
+        function addSampleUsers() {
+            const samples = [
+                {name: 'Alice Johnson', email: 'alice@demo.com', age: 28, city: 'New York'},
+                {name: 'Bob Smith', email: 'bob@demo.com', age: 35, city: 'Los Angeles'},
+                {name: 'Carol Davis', email: 'carol@demo.com', age: 24, city: 'Chicago'}
+            ];
+            
+            samples.forEach(async (user) => {
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(user)
+                });
+                if (response.ok) {
+                    const result = await response.json();
+                    users.push(result.data);
+                }
+            });
+            
+            setTimeout(() => {
+                renderUsers();
+                updateStats();
+                addActivity('➕', 'Sample users added');
+            }, 500);
+        }
+
+        function clearAllUsers() {
+            if (confirm('Delete all users? This cannot be undone.')) {
+                users.forEach(async (user) => {
+                    await fetch(`/api/users/${user._id}`, { method: 'DELETE' });
+                });
+                users = [];
+                renderUsers();
+                updateStats();
+                addActivity('🗑️', 'All users cleared');
+            }
+        }
+
+        function downloadBackup() {
+            exportUsers();
+            addActivity('💾', 'Backup downloaded');
+        }
+
+        function addActivity(icon, text) {
+            const activityLog = document.getElementById('activityLog');
+            const item = document.createElement('div');
+            item.className = 'activity-item';
+            item.innerHTML = `
+                <span class="activity-icon">${icon}</span>
+                <span class="activity-text">${text}</span>
+                <span class="activity-time">${new Date().toLocaleTimeString()}</span>
+            `;
+            activityLog.insertBefore(item, activityLog.firstChild);
+            
+            // Keep only last 5 activities
+            while (activityLog.children.length > 5) {
+                activityLog.removeChild(activityLog.lastChild);
+            }
+        }
+
+        // Initialize analytics
+        updateAnalytics();
+
+        function closeModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        window.onclick = (e) => {
+            if (e.target === document.getElementById('editModal')) closeModal();
+        }
+    </script>
+</body>
+</html>

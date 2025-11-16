@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management System</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>👥 User Management System</h1>
+            <a href="/add" class="btn btn-primary">Add New User</a>
+        </header>
+
+        <div class="users-grid">
+            <% if (users.length === 0) { %>
+                <div class="empty-state">
+                    <h3>No users found</h3>
+                    <p>Start by adding your first user!</p>
+                    <a href="/add" class="btn btn-primary">Add User</a>
+                </div>
+            <% } else { %>
+                <% users.forEach(user => { %>
+                    <div class="user-card">
+                        <h3><%= user.name %></h3>
+                        <p class="email">📧 <%= user.email %></p>
+                        <p class="age">🎂 Age: <%= user.age %></p>
+                        <p class="city">📍 <%= user.city %></p>
+                        <div class="actions">
+                            <a href="/edit/<%= user._id %>" class="btn btn-warning">Edit</a>
+                            <form method="POST" action="/delete/<%= user._id %>" style="display: inline;">
+                                <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this user?')">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                <% }) %>
+            <% } %>
+        </div>
+    </div>
+</body>
+</html>
